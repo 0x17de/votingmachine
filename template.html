@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script> 
+<script type="text/javascript">
+function send() {
+  var form = $('form').eq(0);
+    $.ajax('/ideas/', {
+      type:'post',
+      data:form.serialize(),
+      success:function(data) {
+		t = form.get(0).text;
+		data = Number(data);
+		if (data > 0) {
+			addIdea(data, 0, t.value.replace(/^[ \t]*(.*)[ \t]*$/, "$1"));
+			t.value = '';
+			updateMaxLength();
+		} else {
+			if (data == -1)
+				alert('More than 140 characters.');
+			else if (data == -2)
+				alert('Wait up to 20 seconds to post again.');
+			else if (data == -3)
+				alert('Post more ideas tomorrow.');
+			else if (data == -4)
+				alert('We know that idea already.');
+		}
+      },
+      error:function(xHr, status, error) {
+        alert(':( ' + status + ' ' + error);
+      }
+    });
+}
+function vote(id, bUp) {
+    $.ajax((bUp?'/upvote/':'/downvote/')+id+'/', {
+      type:'post',
+      success:function(data) {
+		data = Number(data);
+		if (data > 0) {
+			postById[id].text(Number(postById[id].text())+(bUp?1:-1));
+		}
+      },
+      error:function(xHr, status, error) {
+        alert(':( ' + status + ' ' + error);
+      }
+    });
+}
+
+var postById = {};
+var posts;
+function addIdea(id, value, title) {
+    if (!posts) posts = $('#posts');
+	posts.prepend(
+          $('<div/>')
+            .append($('<button/>').html('&uarr;').click(function() {vote(id, true);}))
+            .append($('<button/>').html('&darr;').click(function() {vote(id, false);}))
+            .append(postById[id]=$('<span/>').text(value))
+            .append($('<span/>').text(title.replace(/^[ \t]*(.*)[ \t]*$/, "$1")))
+        );
+}
+var maxLength;
+function updateMaxLength() {
+	if (!maxLength) maxLength = $('#maxLength');
+	maxLength.text(140-textF.val().replace(/^[ \t]*(.*)[ \t]*$/, "$1").length);
+}
+var textF;
+$(function() {
+  textF = $('#text');
+  updateMaxLength()
+  $.ajax('/ideas/', {
+    dataType:'json',
+    success:function(data) {
+      console.log(data);
+      for(var i = 0; i < data.length; ++i) {
+        addIdea.apply(null, data[i]);
+      }
+    }
+  });
+});
+</script>
+<style type="text/css">
+form > span {
+	width: 2em;
+	text-align: right;
+	display: inline-block;
+	margin: 0 0.4em;
+}
+input[type=text] {
+	width: 30em;
+}
+button {
+	width: 2em; height: 2em;
+	border: 1px outset;
+	background: #eef;
+}
+#posts > div > span:first-of-type {
+	width: 2em;
+	text-align: right;
+	margin: 0 0.4em;
+	display: inline-block;
+}
+</style>
+</head>
+<body>
+<form onsubmit="send(); return false">
+<span id="maxLength">140</span><input id="text" autocomplete="off" required type="text" onkeyup="updateMaxLength()" maxlength="140" name="text" value="Idea" />
+<input type="submit" value="Submit Idea" />
+</form>
+<div id='posts'>
+
+</div>
+</body>
+</html>
+
